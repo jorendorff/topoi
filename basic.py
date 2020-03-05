@@ -108,6 +108,8 @@ class IdentifierExpr:
         name = self.name
         expected_type = str if name.endswith("$") else float
         assert isinstance(value, expected_type)
+        if env.tracing:
+            print("*** Setting {} to {}".format(name, basic_to_str(value)))
         env.variables[name] = value
 
 
@@ -117,7 +119,7 @@ BASIC_FUNCTIONS = {
     'INSTR': (['number', 'string', 'string'], 'number'),
     'MID$': (['string', 'number', 'number'], 'string')
 }
-    
+
 
 class CallExpr:
     def __init__(self, name, args):
@@ -180,20 +182,11 @@ class CallExpr:
 
     def assign(self, env, value):
         args = [e.evaluate(env) for e in self.args]
-        if self.name in ('INT', 'LEN', 'INSTR', 'MID$'):
+        if self.name in BASIC_FUNCTIONS:
             raise BasicError("can't assign to {}()".format(self.name))
         elif self.name in env.arrays or len(self.name) <= 3:
-            if len(args) != 1:
-                raise BasicError("array expects 1 argument")
-            if not isinstance(args[0], float):
-                raise BasicError("array expects numeric index")
-            if self.name not in env.arrays:
-                env.define_array(self.name, 10)
             i = int(args[0])
-            arr = env.arrays[self.name]
-            if not (0 <= i < len(arr)):
-                raise BasicError("array index out of range: {}({})".format(self.name, i))
-            arr[i] = value
+            env.set_elem(self.name, i, value)
         else:
             raise BasicError("unknown array: " + self.name)
 
@@ -794,6 +787,7 @@ class Interpreter:
         self.stack = []
         self._pc = 0
         self._jumped = False
+        self.tracing = False
 
         program = [(lineno, line) for lineno, line in program]
         self.line_table = {lineno: index for index, (lineno, _) in enumerate(program)}
@@ -814,6 +808,18 @@ class Interpreter:
         # `DIM X(10)` defines an array that goes up to 10.
         self.arrays[name] = ["" if name.endswith('$') else 0.0] * (size + 1)
 
+    def set_elem(self, name, index, value):
+        if name not in self.arrays:
+            self.define_array(name, 10)
+
+        arr = self.arrays[name]
+        if not (0 <= index < len(arr)):
+            raise BasicError("array index out of range: {}({})".format(name, index))
+        if self.tracing:
+            print("*** Setting {}({}) to {}"
+                  .format(name, index, basic_to_str(value)))
+        arr[index] = value
+
     def jump(self, lineno):
         self.jump_to_index(self.line_table[lineno])
 
@@ -823,11 +829,12 @@ class Interpreter:
 
     def get_next_index(self):
         return self._pc + 1
-        
+
     def run(self):
         while self.status == 'run':
             pc = self._pc
-            #print_line(*self.program[pc])
+            if self.tracing:
+                print_line(*self.program[pc])
             self._jumped = False
             try:
                 self.program[pc][1].run(self)
