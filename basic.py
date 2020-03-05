@@ -762,27 +762,54 @@ def parse_line(line):
     return stmt
 
 
-def load(source_file):
-    lines = []
-    for physical_lineno, line in enumerate(open(source_file, 'r'), start=1):
-        line = line.strip()
-        if line == '' or line.startswith("'"):
-            continue
-        first, rest = line.split(' ', 1)
-        if first == 'REM':
-            continue
-        if first.isdigit():
-            lineno = int(first)
-            if lines and lines[-1][0] >= lineno:
-                raise ValueError(
-                    "{}:{}: error: line number {} must be greater than previous line number {}"
-                    .format(source_file, physical_lineno, first, lines[-1][0]))
-            lines.append((lineno, rest.lstrip()))
-    return lines
+class Program:
+    def __init__(self, lines, line_table):
+        self.lines = lines
+        self.line_table = line_table
+
+    @staticmethod
+    def split_lines(line_iter, filename=""):
+        lines = []
+        for physical_lineno, line in enumerate(line_iter, start=1):
+            line = line.strip()
+            if line == '' or line.startswith("'"):
+                continue
+            first, rest = line.split(' ', 1)
+            if first == 'REM':
+                continue
+            if first.isdigit():
+                lineno = int(first)
+                if lines and lines[-1][0] >= lineno:
+                    raise ValueError(
+                        "{}:{}: error: line number {} must be greater than previous line number {}"
+                        .format(filename, physical_lineno, first, lines[-1][0]))
+                yield lineno, rest.lstrip()
+
+    @classmethod
+    def from_lines(cls, line_iter, filename=""):
+        lines = [(lineno, line) for lineno, line in cls.split_lines(line_iter, filename)]
+        line_table = {lineno: index for index, (lineno, _) in enumerate(lines)}
+        parsed_lines = []
+        for index, (lineno, line) in enumerate(lines):
+            try:
+                stmt = parse_line(line)
+                stmt.type_check()
+                stmt.check_line_numbers(line_table)
+            except BasicError as exc:
+                print_line(lineno, line)
+                raise
+            parsed_lines.append((lineno, stmt))
+        return cls(parsed_lines, line_table)
+
+    @classmethod
+    def load(cls, filename):
+        with open(filename) as f:
+            return cls.from_lines(f, filename)
 
 
 class Interpreter:
     def __init__(self, program):
+        self.program = program
         self.status = 'run'
         self.variables = {}
         self.arrays = {}
@@ -790,20 +817,6 @@ class Interpreter:
         self._pc = 0
         self._jumped = False
         self.tracing = False
-
-        program = [(lineno, line) for lineno, line in program]
-        self.line_table = {lineno: index for index, (lineno, _) in enumerate(program)}
-
-        self.program = []
-        for index, (lineno, line) in enumerate(program):
-            try:
-                stmt = parse_line(line)
-                stmt.type_check()
-                stmt.check_line_numbers(self.line_table)
-            except BasicError as exc:
-                print_line(lineno, line)
-                raise
-            self.program.append((lineno, stmt))
 
     def define_array(self, name, size):
         # The actual size of the array is size + 1 because in BASIC,
@@ -823,7 +836,7 @@ class Interpreter:
         arr[index] = value
 
     def jump(self, lineno):
-        self.jump_to_index(self.line_table[lineno])
+        self.jump_to_index(self.program.line_table[lineno])
 
     def jump_to_index(self, index):
         self._pc = index
@@ -836,17 +849,18 @@ class Interpreter:
         while self.status == 'run':
             pc = self._pc
             if self.tracing:
-                print_line(*self.program[pc])
+                print_line(*self.program.lines[pc])
             self._jumped = False
             try:
-                self.program[pc][1].run(self)
+                self.program.lines[pc][1].run(self)
             except BasicError as exc:
-                print_line(*self.program[pc])
+                print_line(*self.program.lines[pc])
                 raise exc
             if not self._jumped:
                 self._pc += 1
-                if self._pc >= len(self.program):
+                if self._pc >= len(self.program.lines):
                     self.status = 'stop'
 
-program = load("original.bas")
+
+program = Program.load("original.bas")
 Interpreter(program).run()
