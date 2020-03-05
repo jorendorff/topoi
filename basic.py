@@ -329,7 +329,7 @@ class RandomizeStmt(Stmt):
     def run(self, env):
         pass
 
-    
+
 class IfStmt(Stmt):
     def __init__(self, condition, target):
         self.condition = condition
@@ -471,14 +471,14 @@ class OnGotoStmt(Stmt):
     def __str__(self):
         return "ON {} GOTO {}".format(self.expr, ','.join(str(t) for t in self.targets))
 
-    def type_check(self):
-        if self.expr.type_check() != 'number':
-            raise BasicError("ON/GOTO requires numeric operand")
-
     def check_line_numbers(self, lineno_table):
         for target in self.targets:
             if target not in lineno_table:
                 raise BasicError("no such line number: " + repr(target))
+
+    def type_check(self):
+        if self.expr.type_check() != 'number':
+            raise BasicError("ON/GOTO requires numeric operand")
 
     def run(self, env):
         num = self.expr.evaluate(env)
@@ -560,6 +560,8 @@ class AssignmentStmt(Stmt):
             target.assign(env, value)
 
 
+# Parsing
+
 def parse_line(line):
     tokens = list(tokenize(line))
 
@@ -588,7 +590,7 @@ def parse_line(line):
         t = tokens[point]
         point += 1
         return t
-        
+
     def parse_prim():
         nonlocal point
         if at_end():
@@ -758,7 +760,7 @@ def parse_line(line):
         raise BasicError("stray tokens {} left at end of statement"
                          .format(repr(tokens[point:])))
     return stmt
-    
+
 
 def load(source_file):
     lines = []
