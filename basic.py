@@ -22,6 +22,26 @@ class BasicError(ValueError):
     pass
 
 
+def basic_to_str(value):
+    if isinstance(value, str):
+        return value
+    elif isinstance(value, float):
+        # Print "1", not "1.0".
+        if int(value) == value:
+            value = int(value)
+
+        # My best guess is that positive numbers were printed with a space in
+        # front.
+        if value > 0:
+            return ' ' + str(value)
+        return str(value)
+    else:
+        raise TypeError("printing unrecognized value: " + repr(value))
+
+
+assert basic_to_str(1.0) == " 1"
+
+
 # Expressions
 
 class NumberLiteralExpr:
@@ -395,26 +415,6 @@ class NextStmt(Stmt):
             env.jump_to_index(record[4])
         else:
             env.stack.pop()
-
-
-def basic_to_str(value):
-    if isinstance(value, str):
-        return value
-    elif isinstance(value, float):
-        # Print "1", not "1.0".
-        if int(value) == value:
-            value = int(value)
-
-        # My best guess is that positive numbers were printed with a space in
-        # front.
-        if value > 0:
-            return ' ' + str(value)
-        return str(value)
-    else:
-        raise TypeError("printing unrecognized value: " + repr(value))
-
-
-assert basic_to_str(1.0) == " 1"
 
 
 class PrintTab:
