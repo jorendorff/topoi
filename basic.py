@@ -862,5 +862,5 @@ class Interpreter:
                     self.status = 'stop'
 
 
-program = Program.load("original.bas")
+program = Program.load("topoi.bas")
 Interpreter(program).run()
