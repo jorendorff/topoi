@@ -1,4 +1,7 @@
+# basic.py - Run BASIC programs.
+
 import re, random, sys, math
+import argparse
 
 TOKEN_RE = re.compile(r'''(?x)
 \s*
@@ -808,7 +811,7 @@ class Program:
 
 
 class Interpreter:
-    def __init__(self, program):
+    def __init__(self, program, tracing=False):
         self.program = program
         self.status = 'run'
         self.variables = {}
@@ -816,7 +819,8 @@ class Interpreter:
         self.stack = []
         self._pc = 0
         self._jumped = False
-        self.tracing = False
+        self.tracing = tracing
+        self.output_column = 0
 
     def define_array(self, name, size):
         # The actual size of the array is size + 1 because in BASIC,
@@ -861,6 +865,17 @@ class Interpreter:
                 if self._pc >= len(self.program.lines):
                     self.status = 'stop'
 
+def main():
+    parser = argparse.ArgumentParser(description="Interpret some sort of BASIC program.")
+    parser.add_argument('file', metavar='FILE', type=str, nargs=1,
+                        help="filename of the BASIC program to load and run")
+    parser.add_argument('--trace', action='store_true',
+                        help="enable tracing of every line executed and every value stored")
+    options = parser.parse_args()
+    [filename] = options.file
+    program = Program.load(filename)
+    Interpreter(program, tracing=options.trace).run()
 
-program = Program.load("topoi.bas")
-Interpreter(program).run()
+
+if __name__ == '__main__':
+    main()
