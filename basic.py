@@ -437,14 +437,15 @@ class PrintStmt(Stmt):
 
     def run(self, env):
         # maybe these are tabs, worth a shot
-        sys.stdout.write("\t" * self.leading_comma_count)
+        for i in range(self.leading_comma_count):
+            env.write_tab()
         for e in self.exprs:
             if isinstance(e, PrintTab):
-                sys.stdout.write("\t")
+                env.write_tab()
             else:
-                sys.stdout.write(basic_to_str(e.evaluate(env)))
+                env.write(basic_to_str(e.evaluate(env)))
         if not self.trailing_semicolon:
-            sys.stdout.write("\n")
+            env.write_end_of_line()
 
 
 class LinputStmt(Stmt):
@@ -855,6 +856,20 @@ class Interpreter:
 
     def get_next_index(self):
         return self._pc + 1
+
+    def write(self, text):
+        assert '\n' not in text
+        assert '\t' not in text
+        sys.stdout.write(text)
+        self.output_column += len(text)
+
+    def write_tab(self):
+        TAB_WIDTH = 14  # based on the transcripts in the thesis
+        self.write(" " * (TAB_WIDTH - self.output_column % TAB_WIDTH))
+
+    def write_end_of_line(self):
+        sys.stdout.write("\n")
+        self.output_column = 0
 
     def run(self):
         while self.status == 'run':
