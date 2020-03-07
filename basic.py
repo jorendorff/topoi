@@ -14,13 +14,6 @@ def print_line(lineno, line):
     print("%05d   %s" % (lineno, line))
 
 
-def tokenize(line):
-    for m in re.finditer(TOKEN_RE, line):
-        token = m.group(1)
-        if not token.startswith(("'", "REM ")):
-            yield m.group(1)
-
-
 class BasicError(ValueError):
     pass
 
@@ -564,6 +557,13 @@ class AssignmentStmt(Stmt):
 
 
 # Parsing
+
+def tokenize(line):
+    for m in re.finditer(TOKEN_RE, line):
+        token = m.group(1)
+        if not token.startswith(("'", "REM ")):
+            yield m.group(1)
+
 
 def parse_line(line):
     tokens = list(tokenize(line))
