@@ -419,16 +419,15 @@ class PrintTab:
 
 
 class PrintStmt(Stmt):
-    def __init__(self, exprs, leading_comma_count=0, trailing_semicolon=False):
+    def __init__(self, exprs, trailing_semicolon=False):
         self.exprs = exprs
-        self.leading_comma_count = leading_comma_count
         self.trailing_semicolon = trailing_semicolon
 
     def __str__(self):
-        if self.exprs == [] and self.leading_comma_count == 0:
+        if self.exprs == []:
             return "PRINT"
         return "PRINT{}{}".format(
-            "," * self.leading_comma_count or " ",
+            "" if isinstance(self.exprs[0], PrintTab) else " ",
             ''.join(str(e) for e in self.exprs))
 
     def type_check(self):
@@ -436,9 +435,6 @@ class PrintStmt(Stmt):
             expr.type_check()
 
     def run(self, env):
-        # maybe these are tabs, worth a shot
-        for i in range(self.leading_comma_count):
-            env.write_tab()
         for e in self.exprs:
             if isinstance(e, PrintTab):
                 env.write_tab()
@@ -712,9 +708,6 @@ def parse_line(line):
             point += 1
             return NextStmt(var)
     elif match('PRINT'):
-        commas = 0
-        while match(','):
-            commas += 1  # not sure what leading commas are supposed to do
         exprs = []
         semicolon = False
         while not at_end():
@@ -725,7 +718,7 @@ def parse_line(line):
                 exprs.append(PrintTab())
             else:
                 exprs.append(parse_expr())
-        return PrintStmt(exprs, commas, semicolon)
+        return PrintStmt(exprs, semicolon)
     elif match('LINPUT'):
         v = require_identifier()
         if not v.endswith('$'):
