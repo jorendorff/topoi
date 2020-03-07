@@ -257,8 +257,13 @@ class ComparisonExpr:
 # Statements
 
 class Stmt:
+    def jump_targets(self):
+        return ()
+
     def check_line_numbers(self, lineno_table):
-        pass
+        for lineno in self.jump_targets():
+            if lineno not in lineno_table:
+                raise BasicError("no such line number: " + repr(lineno))
 
     def type_check(self):
         pass
@@ -338,9 +343,8 @@ class IfStmt(Stmt):
         if self.condition.type_check() != 'number':
             raise BasicError("IF statement condition must be number")
 
-    def check_line_numbers(self, lineno_table):
-        if self.target not in lineno_table:
-            raise BasicError("no such line number: " + repr(self.target))
+    def jump_targets(self):
+        return [self.target]
 
     def run(self, env):
         cond = self.condition.evaluate(env)
@@ -467,10 +471,8 @@ class OnGotoStmt(Stmt):
     def __str__(self):
         return "ON {} GOTO {}".format(self.expr, ','.join(str(t) for t in self.targets))
 
-    def check_line_numbers(self, lineno_table):
-        for target in self.targets:
-            if target not in lineno_table:
-                raise BasicError("no such line number: " + repr(target))
+    def jump_targets(self):
+        return self.targets
 
     def type_check(self):
         if self.expr.type_check() != 'number':
@@ -493,9 +495,8 @@ class GotoStmt(Stmt):
     def __str__(self):
         return "GOTO {}".format(self.target)
 
-    def check_line_numbers(self, lineno_table):
-        if self.target not in lineno_table:
-            raise BasicError("no such line number: " + repr(self.target))
+    def jump_targets(self):
+        return [self.target]
 
     def run(self, env):
         env.jump(self.target)
@@ -508,9 +509,8 @@ class GosubStmt(Stmt):
     def __str__(self):
         return "GOSUB {}".format(self.target)
 
-    def check_line_numbers(self, lineno_table):
-        if self.target not in lineno_table:
-            raise BasicError("no such line number: " + repr(self.target))
+    def jump_targets(self):
+        return [self.target]
 
     def run(self, env):
         env.stack.append(['GOSUB', env.get_next_index()])
@@ -808,6 +808,13 @@ class Program:
     def load(cls, filename):
         with open(filename) as f:
             return cls.from_lines(f, filename)
+
+    def all_jump_targets(self):
+        all_targets = set()
+        for _, stmt in self.lines:
+            for target in stmt.jump_targets():
+                all_targets.add(target)
+        return all_targets
 
 
 class Interpreter:
