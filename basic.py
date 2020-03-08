@@ -5,8 +5,7 @@ import argparse
 
 TOKEN_RE = re.compile(r'''(?x)
 \s*
-(REM[ ].* | '.* | [A-Z][0-9A-Z]*\$? | [0-9]+ | "[^"]*" | <> | .)
-\s*
+(REM[ ].* | '.* | [A-Z][0-9A-Z]*\$? | [0-9]+ | "[^"]*" | <> | \S)
 ''')
 
 
@@ -257,6 +256,10 @@ class ComparisonExpr:
 # Statements
 
 class Stmt:
+    def __init__(self):
+        self.lineno = None
+        self.comment = ''
+
     def jump_targets(self):
         return ()
 
@@ -271,7 +274,7 @@ class Stmt:
 
 class EmptyStmt(Stmt):
     def __init__(self):
-        pass
+        super(EmptyStmt, self).__init__()
 
     def __str__(self):
         return "REM"
@@ -282,6 +285,7 @@ class EmptyStmt(Stmt):
 
 class DimStmt(Stmt):
     def __init__(self, name, size_expr):
+        super(DimStmt, self).__init__()
         self.name = name
         self.size_expr = size_expr
 
@@ -300,7 +304,7 @@ class DimStmt(Stmt):
 
 class EndStmt(Stmt):
     def __init__(self):
-        pass
+        super(EndStmt, self).__init__()
 
     def __str__(self):
         return "END"
@@ -311,7 +315,7 @@ class EndStmt(Stmt):
 
 class StopStmt(Stmt):
     def __init__(self):
-        pass
+        super(StopStmt, self).__init__()
 
     def __str__(self):
         return "STOP"
@@ -322,7 +326,7 @@ class StopStmt(Stmt):
 
 class RandomizeStmt(Stmt):
     def __init__(self):
-        pass
+        super(RandomizeStmt, self).__init__()
 
     def __str__(self):
         return "RANDOMIZE"
@@ -333,6 +337,7 @@ class RandomizeStmt(Stmt):
 
 class IfStmt(Stmt):
     def __init__(self, condition, target):
+        super(IfStmt, self).__init__()
         self.condition = condition
         self.target = target
 
@@ -356,6 +361,7 @@ class IfStmt(Stmt):
 
 class ForStmt(Stmt):
     def __init__(self, var, first_expr, last_expr):
+        super(ForStmt, self).__init__()
         self.var = var
         self.first_expr = first_expr
         self.last_expr = last_expr
@@ -382,6 +388,7 @@ class ForStmt(Stmt):
 
 class NextStmt(Stmt):
     def __init__(self, var=None):
+        super(NextStmt, self).__init__()
         self.var = var
 
     def __str__(self):
@@ -420,6 +427,7 @@ class PrintTab:
 
 class PrintStmt(Stmt):
     def __init__(self, exprs, trailing_semicolon=False):
+        super(PrintStmt, self).__init__()
         self.exprs = exprs
         self.trailing_semicolon = trailing_semicolon
 
@@ -446,6 +454,7 @@ class PrintStmt(Stmt):
 
 class LinputStmt(Stmt):
     def __init__(self, var):
+        super(LinputStmt, self).__init__()
         self.var = var
 
     def __str__(self):
@@ -462,6 +471,7 @@ class LinputStmt(Stmt):
 
 class OnGotoStmt(Stmt):
     def __init__(self, expr, targets):
+        super(OnGotoStmt, self).__init__()
         self.expr = expr
         self.targets = targets
 
@@ -487,6 +497,7 @@ class OnGotoStmt(Stmt):
 
 class GotoStmt(Stmt):
     def __init__(self, target):
+        super(GotoStmt, self).__init__()
         self.target = target
 
     def __str__(self):
@@ -501,6 +512,7 @@ class GotoStmt(Stmt):
 
 class GosubStmt(Stmt):
     def __init__(self, target):
+        super(GosubStmt, self).__init__()
         self.target = target
 
     def __str__(self):
@@ -516,7 +528,7 @@ class GosubStmt(Stmt):
 
 class ReturnStmt(Stmt):
     def __init__(self):
-        pass
+        super(ReturnStmt, self).__init__()
 
     def __str__(self):
         return "RETURN"
@@ -532,6 +544,7 @@ class ReturnStmt(Stmt):
 
 class AssignmentStmt(Stmt):
     def __init__(self, targets, expr):
+        super(AssignmentStmt, self).__init__()
         self.targets = targets
         self.expr = expr
 
@@ -556,14 +569,24 @@ class AssignmentStmt(Stmt):
 # Parsing
 
 def tokenize(line):
+    tokens = []
+    comment = ''
     for m in re.finditer(TOKEN_RE, line):
         token = m.group(1)
-        if not token.startswith(("'", "REM ")):
-            yield m.group(1)
+        if token_is_comment(token):
+            comment = m.group()  # include preceding whitespace
+            break
+        else:
+            tokens.append(token)
+    return tokens, comment
+
+
+def token_is_comment(token):
+    return token.startswith(("'", "REM "))
 
 
 def parse_line(line):
-    tokens = list(tokenize(line))
+    tokens, comment = tokenize(line)
 
     point = 0
 
@@ -751,11 +774,12 @@ def parse_line(line):
                 raise BasicError("invalid assignment target")
         stmt = AssignmentStmt(vars, value)
     else:
-        print(line)
+        raise BasicError("could not parse line: " + repr(line))
 
     if not at_end():
         raise BasicError("stray tokens {} left at end of statement"
                          .format(repr(tokens[point:])))
+    stmt.comment = comment
     return stmt
 
 
@@ -790,6 +814,7 @@ class Program:
         for index, (lineno, line) in enumerate(lines):
             try:
                 stmt = parse_line(line)
+                stmt.lineno = lineno
                 stmt.type_check()
                 stmt.check_line_numbers(line_table)
             except BasicError as exc:
