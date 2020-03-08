@@ -846,6 +846,7 @@ class Interpreter:
         self._pc = 0
         self._jumped = False
         self.tracing = tracing
+        self.out = sys.stdout
         self.output_column = 0
 
     def define_array(self, name, size):
@@ -878,7 +879,7 @@ class Interpreter:
     def write(self, text):
         assert '\n' not in text
         assert '\t' not in text
-        sys.stdout.write(text)
+        self.out.write(text)
         self.output_column += len(text)
 
     def write_tab(self):
@@ -886,7 +887,7 @@ class Interpreter:
         self.write(" " * (TAB_WIDTH - self.output_column % TAB_WIDTH))
 
     def write_end_of_line(self):
-        sys.stdout.write("\n")
+        self.out.write("\n")
         self.output_column = 0
 
     def run(self):
