@@ -827,7 +827,7 @@ class Program:
             except BasicError as exc:
                 print_line(lineno, line)
                 raise
-            parsed_lines.append((lineno, stmt))
+            parsed_lines.append(stmt)
         return cls(parsed_lines, line_table)
 
     @classmethod
@@ -837,7 +837,7 @@ class Program:
 
     def all_jump_targets(self):
         all_targets = set()
-        for _, stmt in self.lines:
+        for stmt in self.lines:
             for target in stmt.jump_targets():
                 all_targets.add(target)
         return all_targets
@@ -901,12 +901,12 @@ class Interpreter:
         while self.status == 'run':
             pc = self._pc
             if self.tracing:
-                print_line(*self.program.lines[pc])
+                print(self.program.lines[pc])
             self._jumped = False
             try:
-                self.program.lines[pc][1].run(self)
+                self.program.lines[pc].run(self)
             except BasicError as exc:
-                print_line(*self.program.lines[pc])
+                print(self.program.lines[pc])
                 raise exc
             if not self._jumped:
                 self._pc += 1
