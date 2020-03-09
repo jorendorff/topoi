@@ -260,7 +260,7 @@ class Stmt:
         self.lineno = None
         self.comment = ''
 
-    def __stmt__(self):
+    def __str__(self):
         if self.lineno is None:
             margin = ' ' * 8
         else:
