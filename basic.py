@@ -260,6 +260,13 @@ class Stmt:
         self.lineno = None
         self.comment = ''
 
+    def __stmt__(self):
+        if self.lineno is None:
+            margin = ' ' * 8
+        else:
+            margin = "%05d   " % self.lineno
+        return margin + self.stmt_code() + self.comment
+
     def jump_targets(self):
         return ()
 
@@ -276,8 +283,8 @@ class EmptyStmt(Stmt):
     def __init__(self):
         super(EmptyStmt, self).__init__()
 
-    def __str__(self):
-        return "REM"
+    def stmt_code(self):
+        return ""
 
     def run(self, env):
         pass
@@ -289,7 +296,7 @@ class DimStmt(Stmt):
         self.name = name
         self.size_expr = size_expr
 
-    def __str__(self):
+    def stmt_code(self):
         return "DIM {}({})".format(self.name, self.size_expr)
 
     def run(self, env):
@@ -306,7 +313,7 @@ class EndStmt(Stmt):
     def __init__(self):
         super(EndStmt, self).__init__()
 
-    def __str__(self):
+    def stmt_code(self):
         return "END"
 
     def run(self, env):
@@ -317,7 +324,7 @@ class StopStmt(Stmt):
     def __init__(self):
         super(StopStmt, self).__init__()
 
-    def __str__(self):
+    def stmt_code(self):
         return "STOP"
 
     def run(self, env):
@@ -328,7 +335,7 @@ class RandomizeStmt(Stmt):
     def __init__(self):
         super(RandomizeStmt, self).__init__()
 
-    def __str__(self):
+    def stmt_code(self):
         return "RANDOMIZE"
 
     def run(self, env):
@@ -341,7 +348,7 @@ class IfStmt(Stmt):
         self.condition = condition
         self.target = target
 
-    def __str__(self):
+    def stmt_code(self):
         return "IF {} THEN {}".format(self.condition, self.target)
 
     def type_check(self):
@@ -366,7 +373,7 @@ class ForStmt(Stmt):
         self.first_expr = first_expr
         self.last_expr = last_expr
 
-    def __str__(self):
+    def stmt_code(self):
         return "FOR {} = {} TO {}".format(self.var, self.first_expr, self.last_expr)
 
     def type_check(self):
@@ -391,7 +398,7 @@ class NextStmt(Stmt):
         super(NextStmt, self).__init__()
         self.var = var
 
-    def __str__(self):
+    def stmt_code(self):
         if self.var is None:
             return "NEXT"
         else:
@@ -431,7 +438,7 @@ class PrintStmt(Stmt):
         self.exprs = exprs
         self.trailing_semicolon = trailing_semicolon
 
-    def __str__(self):
+    def stmt_code(self):
         if self.exprs == []:
             return "PRINT"
         return "PRINT{}{}".format(
@@ -457,7 +464,7 @@ class LinputStmt(Stmt):
         super(LinputStmt, self).__init__()
         self.var = var
 
-    def __str__(self):
+    def stmt_code(self):
         return "LINPUT {}".format(self.var)
 
     def type_check(self):
@@ -475,7 +482,7 @@ class OnGotoStmt(Stmt):
         self.expr = expr
         self.targets = targets
 
-    def __str__(self):
+    def stmt_code(self):
         return "ON {} GOTO {}".format(self.expr, ','.join(str(t) for t in self.targets))
 
     def jump_targets(self):
@@ -500,7 +507,7 @@ class GotoStmt(Stmt):
         super(GotoStmt, self).__init__()
         self.target = target
 
-    def __str__(self):
+    def stmt_code(self):
         return "GOTO {}".format(self.target)
 
     def jump_targets(self):
@@ -515,7 +522,7 @@ class GosubStmt(Stmt):
         super(GosubStmt, self).__init__()
         self.target = target
 
-    def __str__(self):
+    def stmt_code(self):
         return "GOSUB {}".format(self.target)
 
     def jump_targets(self):
@@ -530,7 +537,7 @@ class ReturnStmt(Stmt):
     def __init__(self):
         super(ReturnStmt, self).__init__()
 
-    def __str__(self):
+    def stmt_code(self):
         return "RETURN"
 
     def run(self, env):
@@ -548,7 +555,7 @@ class AssignmentStmt(Stmt):
         self.targets = targets
         self.expr = expr
 
-    def __str__(self):
+    def stmt_code(self):
         return "{}={}".format("=".join(str(e) for e in self.targets), self.expr)
 
     def type_check(self):
