@@ -1,13 +1,21 @@
 "Aristotle’s Topics" by Hugh Burns
 
-[Include Basic Screen Effects by Emily Short]
-
 The story headline is "A Computer-Prompted Invention Program".
+The story genre is "Non-Fiction".
+The story description is "IF WE TAKE EACH OTHER SERIOUSLY, YOU'LL THINK ABOUT YOUR TOPIC AS YOU NEVER HAVE BEFORE."
+The story creation year is 1979.
 
+Release along with a website, an interpreter, and the source text.
 
-Part 1 - BASIC Rules
+Chapter 1 - The old school
+
+[In which we teach Inform how to behave a little more like '70s-era BASIC.]
+
+The Agora is a room. [Inform requires the world to contain at least one room, even though we are not using its world model at all, in the interest of fidelity to the original program.]
 
 Section 1 - Line input
+
+[Curiously, Inform offers no phrases that simply pause in the middle of running code and wait for the user to type something. BASIC has this capability, and the program makes pervasive use of it.]
 
 Include (- Global user_input = 100; -) after "Parser.i6t".
 
@@ -41,23 +49,44 @@ To print (X - some text):
 	say variable letter spacing.
 
 To say tab:
-	say "              ".
+	say "              ". [Judging by the transcripts, a tab is fourteen spaces.]
 
 
+Section 3 - Running the program
+
+[Topoi doesn't use any of Inform's action processing or turn sequence rules. Instead the entire program runs under the "when play begins" rule below.]
+
+When play begins:
+	run the introductory sequence;
+	while 0 < 1:
+		run the main loop.
 
 
-Part 2 - The Program
+Chapter 2 - What Is a Question?
 
-The Wizard Chamber is a room.
+[In which we present an unconventional view.]
+
+A question is a kind of object.
+
+A question can be asked or unasked. A question is usually unasked. A question can be explained or unexplained. A question is usually unexplained. [These sentences effectively define two boolean fields on each question, specifying that they are false by default.]
+
+A difficulty is a kind of value. A question has a difficulty. The difficulties are easy and hard. [The program starts with a few softball questions before getting into the tricky stuff.]
+
+Some questions are defined by the Table of Aristotelian Questions.
+
+The current question is a question that varies. [This defines a global variable named "the current question".]
 
 
-Chapter 1 - Data
+Chapter 3 - Global Variables
+
+[In which we lay out the state of the program.]
 
 The first name is some text that varies. The first name is "Jane".
 The last name is some text that varies. The last name is "Bloggs".
 The subject is some text that varies. The subject is "Interactive Fiction".
 The purpose is some text that varies.
 The key point is some text that varies.
+
 The ask count is a number that varies.
 The explore count is a number that varies.
 The topic change count is a number that varies.
@@ -69,36 +98,13 @@ The ampersand usage flag is a truth state that varies. [It is true if the user u
 The something else flag is a truth state that varies.
 
 
-Chapter 2 - Questions
+Chapter 4 - The Program
 
-A question is a kind of thing. A question can be asked or unasked. A question is usually unasked. A question can be explained or unexplained. A question is usually unexplained.
+[In which we reproduce the logic of the original BASIC program.]
 
-A difficulty is a kind of value. The difficulties are easy and hard.
+Section 1 - Hello And Welcome!
 
-[After explaining a question, the program prints a prompt which depends on the question.]
-A follow-up prompt is a kind of value. The follow-up prompts are prompt A, prompt B, and prompt C.
-
-Some questions are defined by the Table of Aristotelian Questions.
-
-The current question is a question that varies.
-
-
-Chapter 3 - From the Source
-
-Section 1 - Hello And Welcome
-
-
-[This game doesn't use any of Inform's action processing or turn sequence rules. Instead the entire program runs under the "when play begins" rule below.]
-
-To run the program:
-	follow the starting rule;
-	while 0 < 1:
-		run the main loop.
-
-When play begins, run the program.
-
-This is the starting rule:
-	[something else flag = false; exploration meter=ask count=unrecognized question count=explore count=0]
+To run the introductory sequence:
 	print "[line break][line break][line break][line break][line break][tab]A COMPUTER-PROMPTED INVENTION PROGRAM:[line break][tab]-------------------------------------[line break][line break][tab]          ARISTOTLE'S TOPICS[line break][tab]          ------------------[line break][line break][line break][line break][line break][tab]HELLO AND WELCOME![line break][line break]";
 	[00250]
 	print "PLEASE TYPE IN YOUR FIRST NAME:  ";
@@ -111,26 +117,37 @@ This is the starting rule:
 	[00312]
 	[The special input TEST! makes Topoi skip the introductory stuff, ask the first question, and jump to the main loop--without selecting a subject.]
 	if the last name is not "TEST!":
-		[00320]
-		print "[line break][line break]WELL, [first name] [last name], I HOPE I CAN BE OF SOME ASSISTANCE[line break]TO YOU TODAY.  IF WE TAKE EACH OTHER SERIOUSLY, YOU'LL[line break]THINK ABOUT YOUR TOPIC AS YOU NEVER HAVE BEFORE.[line break][line break][line break][tab]BEFORE WE BEGIN, [first name],  THERE'S AN OLD[line break]SAYING ABOUT COMPUTER-ASSISTED INSTRUCTION,  IT GOES:[line break][line break][tab]'GARBAGE IN, GARBAGE OUT!'[line break][line break]IN OTHER WORDS, YOU AND I MUST WORK TOGETHER SO[line break]YOU CAN GET A GOOD START ON YOUR RESEARCH PAPER.[line break][line break][line break][line break][tab][tab](PRESS 'RETURN' TO CONTINUE.)";
-		wait for the user to press Return;
-		[00510]
-		print "[line break][line break][line break]WOULD YOU LIKE TO REVIEW THE DIRECTIONS AND THE COMMANDS?[line break][tab](YES OR NO?)[line break]";
-		if the user agrees:
-			show directions and commands;
-		[01570]
-		print "[line break][line break][line break][line break]WOULD YOU LIKE A BRIEF EXPLANATION OF HOW[line break]ARISTOTLE'S TOPICS HELP WRITERS WRITE?[line break][tab](YES OR NO?)[line break]";
-		if the user agrees:
-			print "[line break][line break][tab]I'M GLAD YOU ASKED, [first name].  BRIEFLY, THE TWENTY-EIGHT[line break]ENTHYMEME TOPICS HELP A WRITER (OR A SPEAKER) DISCOVER[line break]SPECIFIC ARGUMENTS ABOUT SUBJECTS.[line break][line break][tab]IN HIS 'RHETORIC', ARISTOTLE TELLS US THAT THE AIM OR GOAL[line break]OF RHETORIC IS TO PERSUADE AN AUDIENCE.  REMEMBER THAT TERM --[line break]PERSUADE.[line break][line break][tab]ARISTOTLE BELIEVED THAT IF HIS STUDENTS IN THE[line break]ACADEMY KNEW AND PRACTICED USING THE TOPICS, THEY WOULD BECOME[line break]EFFECTIVE 'PERSUADERS.'[line break][line break][tab]YOU'LL RECOGNIZE AMONG THE TOPICS:[line break][line break]";
-			print "[tab]1.  QUESTIONS OF DEVINITION;[line break]";
-			print "[tab]2.  QUESTIONS ABOUT CAUSES AND EFFECTS;[line break]";
-			print "[tab]3.  QUESTIONS REGARDING OPPOSITES AND ASSOCIATIONS;[line break]";
-			print "[tab]4.  QUESTIONS ABOUT CONSEQUENCES;[line break]";
-			print "[tab]5.  AND QUESTIONS ABOUT MATTERS OF FACT AND OPINION.[line break][line break][tab][tab](HIT 'RETURN' TO CONTINUE.)[line break]";
-			wait for the user to press Return;
+		introduce ourselves;
+		offer directions;
+		offer some background;
 		get the initial subject;
 		get the user's purpose;
-	begin the brainstorming session.
+	[03330 'PAGING OPENING QUESTIONING SEQUENCE]
+	print "[line break][line break][line break][line break][line break][tab]RELAX NOW, [first name], AND ENJOY THIS BRAINSTORMING SESSION.[line break][line break][line break][line break][line break][line break][line break][line break][line break][line break][line break][line break][line break][line break]";
+	ask a question.
+
+To introduce ourselves:
+	[00320]
+	print "[line break][line break]WELL, [first name] [last name], I HOPE I CAN BE OF SOME ASSISTANCE[line break]TO YOU TODAY.  IF WE TAKE EACH OTHER SERIOUSLY, YOU'LL[line break]THINK ABOUT YOUR TOPIC AS YOU NEVER HAVE BEFORE.[line break][line break][line break][tab]BEFORE WE BEGIN, [first name],  THERE'S AN OLD[line break]SAYING ABOUT COMPUTER-ASSISTED INSTRUCTION,  IT GOES:[line break][line break][tab]'GARBAGE IN, GARBAGE OUT!'[line break][line break]IN OTHER WORDS, YOU AND I MUST WORK TOGETHER SO[line break]YOU CAN GET A GOOD START ON YOUR RESEARCH PAPER.[line break][line break][line break][line break][tab][tab](PRESS 'RETURN' TO CONTINUE.)";
+	wait for the user to press Return.
+
+To offer directions:
+	[00510]
+	print "[line break][line break][line break]WOULD YOU LIKE TO REVIEW THE DIRECTIONS AND THE COMMANDS?[line break][tab](YES OR NO?)[line break]";
+	if the user agrees:
+		show directions and commands.
+
+To offer some background:
+	[01570]
+	print "[line break][line break][line break][line break]WOULD YOU LIKE A BRIEF EXPLANATION OF HOW[line break]ARISTOTLE'S TOPICS HELP WRITERS WRITE?[line break][tab](YES OR NO?)[line break]";
+	if the user agrees:
+		print "[line break][line break][tab]I'M GLAD YOU ASKED, [first name].  BRIEFLY, THE TWENTY-EIGHT[line break]ENTHYMEME TOPICS HELP A WRITER (OR A SPEAKER) DISCOVER[line break]SPECIFIC ARGUMENTS ABOUT SUBJECTS.[line break][line break][tab]IN HIS 'RHETORIC', ARISTOTLE TELLS US THAT THE AIM OR GOAL[line break]OF RHETORIC IS TO PERSUADE AN AUDIENCE.  REMEMBER THAT TERM --[line break]PERSUADE.[line break][line break][tab]ARISTOTLE BELIEVED THAT IF HIS STUDENTS IN THE[line break]ACADEMY KNEW AND PRACTICED USING THE TOPICS, THEY WOULD BECOME[line break]EFFECTIVE 'PERSUADERS.'[line break][line break][tab]YOU'LL RECOGNIZE AMONG THE TOPICS:[line break][line break]";
+		print "[tab]1.  QUESTIONS OF DEVINITION;[line break]";
+		print "[tab]2.  QUESTIONS ABOUT CAUSES AND EFFECTS;[line break]";
+		print "[tab]3.  QUESTIONS REGARDING OPPOSITES AND ASSOCIATIONS;[line break]";
+		print "[tab]4.  QUESTIONS ABOUT CONSEQUENCES;[line break]";
+		print "[tab]5.  AND QUESTIONS ABOUT MATTERS OF FACT AND OPINION.[line break][line break][tab][tab](HIT 'RETURN' TO CONTINUE.)[line break]";
+		wait for the user to press Return.
 
 
 Section 2 - Directions
@@ -208,11 +225,6 @@ To ask for any more: [03321]
 	get a line of input [which we will ignore];
 	print "[line break]".
 
-To begin the brainstorming session:
-	[03330 'PAGING OPENING QUESTIONING SEQUENCE]
-	print "[line break][line break][line break][line break][line break][tab]RELAX NOW, [first name], AND ENJOY THIS BRAINSTORMING SESSION.[line break][line break][line break][line break][line break][line break][line break][line break][line break][line break][line break][line break][line break][line break]";
-	ask a question.
-
 
 Section 5 - Asking Questions
 
@@ -242,102 +254,7 @@ To move on to the next question:
 	print "[line break][line break][tab]HERE IS YOUR NEXT QUESTION -- NUMBER [ask count + 1].[line break][line break][line break]".
 
 
-Section 6 - The Main Loop
-
-The saved input flag is a truth state that varies. The saved input flag is false.
-
-To run the main loop:
-	if the saved input flag is true:
-		now the saved input flag is false;
-	otherwise:
-		while 0 < 1:
-			print "[line break][line break]";
-			get a line of input, ignoring blank lines;
-			if the user input matches the regular expression "CONTINUE!":
-				segue into the next question, maybe offering a subject change;
-			else if the user input is "NO":
-				respond to NO after a prompt;
-			else:
-				break;
-	if the user input matches the regular expression "STOP!":
-		quit;
-	else if the user input matches the regular expression "REPEAT!":
-		repeat the question;
-	else if the user input is "?":
-		answer the single question mark;
-	else if the user input matches the regular expression "DIRECTIONS!":
-		show directions and commands;
-		get back to the questions;
-	else if the user input matches the regular expression "HOW.*\?":
-		answer a HOW question;
-	else if the user input matches the regular expression "WHY.*\?":
-		answer a WHY question;
-	else if the user input matches the regular expression "&&":
-		encourage the user to go on;
-	else if the user input matches the regular expression "EXPLAIN!":
-		explain the question;
-	else if the user input matches the regular expression " DO.*N.*T .*UNDERST":
-		explain the question;
-	else if the user input matches the regular expression " DO.*N.*T .*KNOW":
-		explain the question;
-	else if the user input matches the regular expression "CHANGE!":
-		change the subject;
-		segue into the next question [without offering a subject change, since we just did that];
-	else if the user input matches the regular expression "WHAT.*\?":
-		explain the question;
-	else if the user input matches the regular expression "MEAN.*\?":
-		explain the question;
-	else if the user input matches the regular expression " OR .*\?":
-		answer an OR question;
-	else if the user input matches the regular expression "CAN I .*\?":
-		answer affirmatively;
-	else if the user input matches the regular expression "IS .*IT .*\?":
-		answer affirmatively;
-	else if the user input matches the regular expression "BECAUSE":
-		reward BECAUSE;
-		perform exploration branching and feedback, without initial line breaks;
-	else if the user input matches the regular expression "\?":
-		respond to an unrecognized question;
-	else if the something else flag is true:
-		[06160]
-		print "[line break][tab]OKAY.[line break]";
-		segue into the next question, maybe offering a subject change;
-	else if the ampersand usage flag is true:
-		perform exploration branching and feedback;
-		stop;
-	else if the number of characters in the user input is less than 10:
-		encourage elaboration;
-	else if the user input is grandiloquent:
-		respond to garbage or jargon;
-	else:
-		perform exploration branching and feedback.
-
-To get back to the questions [after printing directions]: [01510]
-	print "[tab]BACK TO THE QUESTIONS, [first name]   -->   -->   -->[line break][line break][line break][line break][tab][tab]BUT FIRST, IS THERE[line break]";
-	ask anything else.
-
-To perform exploration branching and feedback, without initial line breaks:
-	[05770 <<<   EXPLORATION BRANCHING AND FEEDBACK   >>>]
-	if not without initial line breaks:
-		print "[line break][line break]";
-	increment the exploration meter;
-	if the exploration meter is 1:
-		print "[one of]GOOD, [first name], ADD TO YOUR RESPONSE NOW.[or]FINE, [first name].  WRITE SOME MORE.[or]THAT'S THE IDEA, [first name].  GIVE ME SOME MORE INFO NOW.[or]BY GEORGE, [first name], GOOD ONE.  WRITE A LITTLE MORE PLEASE.[purely at random][line break]";
-	otherwise:
-		print "[one of]SUPER[or]OUTSTANDING[or]FANTASTIC[or]TERRIFIC[or]GREAT[purely at 	random], [first name]![line break][line break]";
-		increment the explore count;
-		ask anything else.
-
-To ask anything else: [06050]
-	print "[tab][tab]ANYTHING ELSE?[line break]";
-	if the explore count <= 2:
-		print "[tab][tab](YOU CAN ADD MORE INFO, ASK A[line break][tab][tab]QUESTION, OR GIVE A COMMAND --[line break][tab][tab]WHATEVER YOU WISH.)[line break][line break]";
-	if the user agrees: [<--- note that this sets "the user input", which is used in the "otherwise:" case]
-		[06780 'ANSWERS A *YE* TO ANYTHING ELSE?]
-		print "[line break]WHAT?[line break]";
-	otherwise:
-		now the something else flag is true;
-		now the saved input flag is true.
+Section 6 - Asking More Questions
 
 To decide if the next question will be number (N - a number):
 	if the ask count plus one is N, decide yes;
@@ -383,9 +300,106 @@ Table of Next Question Segues
 segue
 "WE'RE MOVING RIGHT ALONG.  HERE IS QUESTION [ask count + 1]."
 "AND HERE COMES A REALLY INTERESTING QUESTION -- NUMBER [ask count + 1]."
-"QUESTION [ask count + 1]-- ONE OF MY ALL-TIME FAVORITES COMING UP."
+"QUESTION [ask count + 1] -- ONE OF MY ALL-TIME FAVORITES COMING UP."
 "YOUR NEXT QUESTION IS NUMBER [ask count + 1]."
 "HERE IS QUESTION [ask count + 1], [first name].";
+
+
+Section 7 - The Main Loop
+
+The saved input flag is a truth state that varies. The saved input flag is false.
+
+To run the main loop:
+	if the saved input flag is true:
+		now the saved input flag is false;
+	otherwise:
+		while 0 < 1:
+			print "[line break][line break]";
+			get a line of input, ignoring blank lines;
+			if the user input matches the text "CONTINUE!":
+				segue into the next question, maybe offering a subject change;
+			else if the user input is "NO":
+				respond to NO after a prompt;
+			else:
+				break;
+	if the user input matches the text "STOP!":
+		quit;
+	else if the user input matches the text "REPEAT!":
+		repeat the question;
+	else if the user input is "?":
+		let the user ask a question;
+	else if the user input matches the text "DIRECTIONS!":
+		show directions and commands;
+		get back to the questions;
+	else if the user input matches the regular expression "HOW.*\?":
+		answer a HOW question;
+	else if the user input matches the regular expression "WHY.*\?":
+		answer a WHY question;
+	else if the user input matches the text "&&":
+		encourage the user to go on;
+	else if the user input matches the text "EXPLAIN!":
+		explain the question;
+	else if the user input matches the regular expression " DO.*N.*T .*UNDERST":
+		explain the question;
+	else if the user input matches the regular expression " DO.*N.*T .*KNOW":
+		explain the question;
+	else if the user input matches the text "CHANGE!":
+		change the subject;
+		segue into the next question [without offering a subject change, since we just did that];
+	else if the user input matches the regular expression "WHAT.*\?":
+		explain the question;
+	else if the user input matches the regular expression "MEAN.*\?":
+		explain the question;
+	else if the user input matches the regular expression " OR .*\?":
+		answer an OR question;
+	else if the user input matches the regular expression "CAN I .*\?":
+		answer affirmatively;
+	else if the user input matches the regular expression "IS .*IT .*\?":
+		answer affirmatively;
+	else if the user input matches the text "BECAUSE":
+		reward BECAUSE;
+		perform exploration branching and feedback, without initial line breaks;
+	else if the user input matches the text "?":
+		respond to an unrecognized question;
+	else if the something else flag is true:
+		[06160]
+		print "[line break][tab]OKAY.[line break]";
+		segue into the next question, maybe offering a subject change;
+	else if the ampersand usage flag is true:
+		perform exploration branching and feedback;
+	else if the number of characters in the user input is less than 10:
+		encourage elaboration;
+	else if the user input is grandiloquent:
+		respond to garbage or jargon;
+	else:
+		perform exploration branching and feedback.
+
+To get back to the questions [after printing directions]: [01510]
+	print "[tab]BACK TO THE QUESTIONS, [first name]   -->   -->   -->[line break][line break][line break][line break][tab][tab]BUT FIRST, IS THERE[line break]";
+	ask anything else.
+
+To perform exploration branching and feedback, without initial line breaks:
+	[05770 <<<   EXPLORATION BRANCHING AND FEEDBACK   >>>]
+	if not without initial line breaks:
+		print "[line break][line break]";
+	increment the exploration meter;
+	if the exploration meter is 1:
+		print "[one of]GOOD, [first name], ADD TO YOUR RESPONSE NOW.[or]FINE, [first name].  WRITE SOME MORE.[or]THAT'S THE IDEA, [first name].  GIVE ME SOME MORE INFO NOW.[or]BY GEORGE, [first name], GOOD ONE.  WRITE A LITTLE MORE PLEASE.[purely at random][line break]";
+	otherwise:
+		print "[one of]SUPER[or]OUTSTANDING[or]FANTASTIC[or]TERRIFIC[or]GREAT[purely at 	random], [first name]![line break][line break]";
+		increment the explore count;
+		ask anything else.
+
+To ask anything else: [06050]
+	print "[tab][tab]ANYTHING ELSE?[line break]";
+	if the explore count <= 2:
+		print "[tab][tab](YOU CAN ADD MORE INFO, ASK A[line break][tab][tab]QUESTION, OR GIVE A COMMAND --[line break][tab][tab]WHATEVER YOU WISH.)[line break][line break]";
+	if the user agrees: [<--- note that this sets "the user input", which is used in the "otherwise:" case]
+		[06780 'ANSWERS A *YE* TO ANYTHING ELSE?]
+		print "[line break]WHAT?[line break]";
+	otherwise:
+		now the something else flag is true;
+		now the saved input flag is true.
 
 To respond to NO after a prompt:
 	[06622 'RESPONDS TO I$=NO AFTER INVENTION PROMPTER]
@@ -407,7 +421,7 @@ To encourage the user to go on:
 	print "[line break]GO ON, [first name].[line break]";
 	now the ampersand usage flag is true.
 
-To answer the single question mark:
+To let the user ask a question:
 	[06750 'ANSWERS THE SINGLE QUESTION MARK (I$="?")]
 	print "[line break]GO AHEAD, [first name], ASK.  I'LL DO THE BEST I CAN.[line break]".
 
@@ -468,7 +482,7 @@ To offer a change of subject:
 		print "[line break][line break][line break][line break]".
 
 
-Section 7 - Explaining
+Section 8 - Explaining
 
 To explain the question:
 	[07470 <<<   CLARIFICATION ARRAY AND EXAMPLE SEQUENCE   >>>]
@@ -482,6 +496,8 @@ To explain the question:
 		now the current question is explained;
 		print "[line break][tab][the follow-up of the current question][line break]".
 
+A follow-up prompt is a kind of value. A question has a follow-up prompt. The follow-up prompts are prompt A, prompt B, and prompt C.
+
 To say (X - a follow-up prompt):
 	If X is:
 		-- prompt A: [09900]
@@ -492,7 +508,7 @@ To say (X - a follow-up prompt):
 			say "YOUR TURN, [first name].".
 
 
-Section 8 - Quitting
+Section 9 - Quitting
 
 To quit: [10020]
 	if the ask count is less than 3:
@@ -500,14 +516,16 @@ To quit: [10020]
 	else if the ask count is less than 7:
 		print "[line break][line break][tab]YOU ARE DEFINITELY A DEEP THINKER, [first name].[line break][line break][tab]YOU WERE ASKED [ask count] QUESTIONS AND FULLY EXPLORED[line break][tab][explore count] OF THEM.[line break][line break][tab]PLEASE COME BACK AGAIN WHEN YOU CAN STAY LONGER.[line break][line break][tab][tab]GOOD-BYE.[line break]";
 	else:
-		print "[line break][line break][tab]YOU EXPLORED[explore count]QUESTIONS OUT OF THE [ask count] I ASKED.[line break][tab]THAT'S[(explore count divided by the ask count) times 100]PERCENT.[line break][line break][tab]LET ME REMIND YOU THAT YOU ARE STILL IN THE FIRST STAGES[line break][tab]OF THE CREATIVE PROCESS.  THESE IDEAS MUST SIMMER NOW.[line break][line break][tab]ALSO, I HOPE YOU CAN CREATE SOME OF YOUR OWN 'TOPIC'[line break][tab]QUESTIONS.  I WON'T ALWAYS BE AROUND TO HELP!!![line break][line break][tab][tab]HOPE YOUR PAPER IS TERRIFIC![line break][line break][tab][tab]GOOD BYE & GOOD LUCK![line break]";
+		print "[line break][line break][tab]YOU EXPLORED [explore count] QUESTIONS OUT OF THE [ask count] I ASKED.[line break][tab]THAT'S [(explore count divided by the ask count) times 100] PERCENT.[line break][line break][tab]LET ME REMIND YOU THAT YOU ARE STILL IN THE FIRST STAGES[line break][tab]OF THE CREATIVE PROCESS.  THESE IDEAS MUST SIMMER NOW.[line break][line break][tab]ALSO, I HOPE YOU CAN CREATE SOME OF YOUR OWN 'TOPIC'[line break][tab]QUESTIONS.  I WON'T ALWAYS BE AROUND TO HELP!!![line break][line break][tab][tab]HOPE YOUR PAPER IS TERRIFIC![line break][line break][tab][tab]GOOD BYE & GOOD LUCK![line break]";
 	end the story finally;
 	[Since we are not using Inform's main loop, we must explicitly add:]
 	follow the shutdown rules.
 
 
 
-Chapter 4 - The Big Table
+Chapter 5 - Aristotle's Topics
+
+[Finally, we have the topics themselves. These are written out as an Inform table. Tables are written in a "tab separated values" form that is a very bad fit for long text.]
 
 Table of Aristotelian Questions
 name	difficulty	text	explanation	follow-up
