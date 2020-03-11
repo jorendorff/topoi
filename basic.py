@@ -9,10 +9,6 @@ TOKEN_RE = re.compile(r'''(?x)
 ''')
 
 
-def print_line(lineno, line):
-    print("%05d   %s" % (lineno, line))
-
-
 class BasicError(ValueError):
     pass
 
@@ -825,7 +821,7 @@ class Program:
                 stmt.type_check()
                 stmt.check_line_numbers(line_table)
             except BasicError as exc:
-                print_line(lineno, line)
+                print("%05d   %s" % (lineno, line))
                 raise
             parsed_lines.append(stmt)
         return cls(parsed_lines, line_table)
