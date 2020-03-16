@@ -295,11 +295,13 @@ class DimStmt(Stmt):
     def stmt_code(self):
         return "DIM {}({})".format(self.name, self.size_expr)
 
+    def type_check(self):
+        if self.size_expr.type_check() != 'number':
+            raise BasicError("DIM statement array size must be number")
+
     def run(self, env):
         size = self.size_expr.evaluate(env)
-        if type(size) is not float:
-            raise BasicError("array dimension must be numeric")
-        elif size < 0 or float(int(size)) != size:
+        if size < 0 or float(int(size)) != size:
             raise BasicError("invalid array dimension")
         else:
             env.define_array(self.name, int(size))
