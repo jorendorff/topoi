@@ -388,13 +388,14 @@ class ForStmt(Stmt):
         last_value = self.last_expr.evaluate(env)
         if type(last_value) is not float:
             raise BasicError("FOR requires numeric bounds")
-        env.stack.append(['FOR', self.var, first_value, last_value, env.get_next_index()])
+        env.variables[self.var + " bound"] = last_value
 
 
 class NextStmt(Stmt):
     def __init__(self, var=None):
         super(NextStmt, self).__init__()
         self.var = var
+        self.loop_head = None
 
     def stmt_code(self):
         if self.var is None:
@@ -406,20 +407,16 @@ class NextStmt(Stmt):
         if self.var.endswith('$'):
             raise BasicError("NEXT variable must be a number variable")
 
-    def run(self, env):
-        if len(env.stack) == 0:
-            raise BasicError("NEXT without FOR")
-        record = env.stack[-1]
-        if record[0] != 'FOR':
-            raise BasicError("NEXT without FOR")
-        if self.var is not None and self.var != record[1]:
-            raise BasicError("FOR/NEXT variable mismatch ({}/{})".format(record[1], self.var))
-        value = record[2] + 1.0
-        if value <= record[3]:
-            env.variables[self.var] = record[2] = value
-            env.jump_to_index(record[4])
-        else:
-            env.stack.pop()
+    def jump_targets(self) -> Sequence[int]:
+        assert isinstance(self.loop_head, int)
+        return [self.loop_head]
+
+    def run(self, env: Interpreter):
+        var: str = self.var or env.program.lines[self.loop_head].var
+        value = env.variables[var] + 1.0
+        env.variables[var] = value
+        if value <= env.variables[var + " bound"]:
+            env.jump(self.loop_head)
 
 
 class PrintTab:
@@ -811,6 +808,31 @@ class Program:
                         .format(filename, physical_lineno, first, lines[-1][0]))
                 yield lineno, rest.lstrip()
 
+    @staticmethod
+    def match_for_next(parsed_lines: List[Stmt]):
+        for_loop_stack = []
+        prev_is_for = False
+        for stmt in parsed_lines:
+            if isinstance(stmt, ForStmt):
+                for_loop_stack.append(stmt)
+                prev_is_for = True
+            else:
+                if prev_is_for:
+                    for_loop_stack[-1].loop_head = stmt.lineno
+                prev_is_for = False
+                if isinstance(stmt, NextStmt):
+                    if len(for_loop_stack) == 0:
+                        raise ValueError("NEXT without FOR")
+                    for_stmt = for_loop_stack.pop()
+                    if stmt.var is None:
+                        stmt.var = for_stmt.var
+                    elif stmt.var != for_stmt.var:
+                        raise BasicError("FOR/NEXT variable mismatch ({}/{})"
+                                         .format(for_stmt.var, stmt.var))
+                    stmt.loop_head = for_stmt.loop_head
+        if for_loop_stack:
+            raise BasicError("FOR without NEXT:\n" + str(for_loop_stack.pop()))
+
     @classmethod
     def from_lines(cls, line_iter, filename=""):
         lines = [(lineno, line) for lineno, line in cls.split_lines(line_iter, filename)]
@@ -820,12 +842,14 @@ class Program:
             try:
                 stmt = parse_line(line)
                 stmt.lineno = lineno
-                stmt.type_check()
-                stmt.check_line_numbers(line_table)
             except BasicError as exc:
                 print("%05d   %s" % (lineno, line))
                 raise
             parsed_lines.append(stmt)
+        cls.match_for_next(parsed_lines)
+        for stmt in parsed_lines:
+            stmt.type_check()
+            stmt.check_line_numbers(line_table)
         return cls(parsed_lines, line_table)
 
     @classmethod
