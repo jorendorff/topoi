@@ -792,7 +792,7 @@ class Program:
 
     @staticmethod
     def split_lines(line_iter, filename=""):
-        lines = []
+        prev_lineno = None
         for physical_lineno, line in enumerate(line_iter, start=1):
             line = line.strip()
             if line == '' or line.startswith("'"):
@@ -802,10 +802,10 @@ class Program:
                 continue
             if first.isdigit():
                 lineno = int(first)
-                if lines and lines[-1][0] >= lineno:
+                if prev_lineno is not None and prev_lineno >= lineno:
                     raise ValueError(
                         "{}:{}: error: line number {} must be greater than previous line number {}"
-                        .format(filename, physical_lineno, first, lines[-1][0]))
+                        .format(filename, physical_lineno, first, prev_lineno))
                 yield lineno, rest.lstrip()
 
     @staticmethod
