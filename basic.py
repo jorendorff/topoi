@@ -698,7 +698,7 @@ def parse_line(line):
         return lineno
 
     if at_end():
-        return EmptyStmt()
+        stmt = EmptyStmt()
     elif match('STOP'):
         stmt = StopStmt()
     elif match('END'):
@@ -724,14 +724,14 @@ def parse_line(line):
         first = parse_expr()
         require('TO')
         last = parse_expr()
-        return ForStmt(var, first, last)
+        stmt = ForStmt(var, first, last)
     elif match('NEXT'):
         if at_end():
-            return NextStmt()
+            stmt = NextStmt()
         elif tokens[point][0].isalpha():
             var = tokens[point]
             point += 1
-            return NextStmt(var)
+            stmt = NextStmt(var)
     elif match('PRINT'):
         exprs = []
         semicolon = False
@@ -743,12 +743,12 @@ def parse_line(line):
                 exprs.append(PrintTab())
             else:
                 exprs.append(parse_expr())
-        return PrintStmt(exprs, semicolon)
+        stmt = PrintStmt(exprs, semicolon)
     elif match('LINPUT'):
         v = require_identifier()
         if not v.endswith('$'):
             raise BasicError("LINPUT requires string variable operand")
-        return LinputStmt(v)
+        stmt = LinputStmt(v)
     elif match('ON'):
         e = parse_expr()
         require('GOTO')
