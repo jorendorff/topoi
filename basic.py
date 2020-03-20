@@ -298,6 +298,13 @@ class Stmt:
     def jump_targets(self) -> Sequence[int]:
         return ()
 
+    def can_fall_through(self) -> bool:
+        """For analysis. True if control can continue to the next statement without jumping.
+
+        This is False for GOSUB statements.
+        """
+        return True
+
     def check_line_numbers(self, lineno_table):
         for lineno in self.jump_targets():
             if lineno not in lineno_table:
@@ -347,6 +354,8 @@ class EndStmt(Stmt):
     def stmt_code(self) -> str:
         return "END"
 
+    def can_fall_through(self) -> bool:
+        return False
 
     def run(self, env: 'Interpreter'):
         env.status = 'stop'
@@ -359,6 +368,8 @@ class StopStmt(Stmt):
     def stmt_code(self) -> str:
         return "STOP"
 
+    def can_fall_through(self) -> bool:
+        return False
 
     def run(self, env: 'Interpreter'):
         env.status = 'stop'
@@ -405,6 +416,7 @@ class ForStmt(Stmt):
         self.var = var
         self.first_expr = first_expr
         self.last_expr = last_expr
+        self.loop_head = None
 
     def stmt_code(self) -> str:
         return "FOR {} = {} TO {}".format(self.var, self.first_expr, self.last_expr)
@@ -518,6 +530,9 @@ class OnGotoStmt(Stmt):
     def jump_targets(self) -> Sequence[int]:
         return self.targets
 
+    def can_fall_through(self) -> bool:
+        return False
+
     def type_check(self):
         if self.expr.type_check() != 'number':
             raise BasicError("ON/GOTO requires numeric operand")
@@ -543,6 +558,8 @@ class GotoStmt(Stmt):
     def jump_targets(self) -> Sequence[int]:
         return [self.target]
 
+    def can_fall_through(self) -> bool:
+        return False
 
     def run(self, env: 'Interpreter'):
         env.jump(self.target)
@@ -559,6 +576,8 @@ class GosubStmt(Stmt):
     def jump_targets(self) -> Sequence[int]:
         return [self.target]
 
+    def can_fall_through(self) -> bool:
+        return False
 
     def run(self, env: 'Interpreter'):
         env.stack.append(['GOSUB', env.get_next_index()])
@@ -572,6 +591,8 @@ class ReturnStmt(Stmt):
     def stmt_code(self) -> str:
         return "RETURN"
 
+    def can_fall_through(self) -> bool:
+        return False
 
     def run(self, env: 'Interpreter'):
         if len(env.stack) == 0:
