@@ -1,7 +1,9 @@
 # basic.py - Run BASIC programs.
 
 import re, random, sys, math
+from typing import Dict, Tuple, List, Sequence, Set, Optional, Union, Iterable, TypeVar, Type
 import argparse
+
 
 TOKEN_RE = re.compile(r'''(?x)
 \s*
@@ -13,7 +15,10 @@ class BasicError(ValueError):
     pass
 
 
-def basic_to_str(value):
+BasicValue = Union[float, str]
+
+
+def basic_to_str(value: BasicValue) -> str:
     if isinstance(value, str):
         return value
     elif isinstance(value, float):
@@ -35,7 +40,15 @@ assert basic_to_str(1.0) == " 1"
 
 # Expressions
 
-class NumberLiteralExpr:
+class Expr:
+    def evaluate(self, env: 'Interpreter') -> BasicValue:
+        raise NotImplementedError()
+
+    def type_check(self) -> str:
+        raise NotImplementedError()
+
+
+class NumberLiteralExpr(Expr):
     def __init__(self, value):
         self.value = value
 
@@ -44,58 +57,63 @@ class NumberLiteralExpr:
             return str(int(self.value))
         return str(self.value)
 
-    def evaluate(self, env):
+    def evaluate(self, env: 'Interpreter') -> BasicValue:
         return self.value
 
-    def type_check(self):
+    def type_check(self) -> str:
         return 'number'
 
 
-class StringLiteralExpr:
+class StringLiteralExpr(Expr):
     def __init__(self, value):
         self.value = value
 
     def __str__(self):
         return '"' + self.value + '"'
 
-    def evaluate(self, env):
+    def evaluate(self, env: 'Interpreter') -> BasicValue:
         return self.value
 
-    def type_check(self):
+    def type_check(self) -> str:
         return 'string'
 
 
-class RndExpr:
+class RndExpr(Expr):
     def __init__(self):
         pass
 
     def __str__(self):
         return 'RND'
 
-    def evaluate(self, env):
+    def evaluate(self, env: 'Interpreter') -> BasicValue:
         return random.random()
 
-    def type_check(self):
+    def type_check(self) -> str:
         return 'number'
 
 
-class IdentifierExpr:
-    def __init__(self, name):
+class AssignableExpr(Expr):
+    def assign(self, env: 'Interpreter', value: BasicValue):
+        raise NotImplementedError()
+
+
+class IdentifierExpr(AssignableExpr):
+    def __init__(self, name: str):
         self.name = name
 
     def __str__(self):
         return self.name
 
-    def type_check(self):
+    def type_check(self) -> str:
         return 'string' if self.name.endswith('$') else 'number'
 
-    def evaluate(self, env):
+    def evaluate(self, env: 'Interpreter') -> BasicValue:
         name = self.name
         if name not in env.variables:
             env.variables[name] = "" if name.endswith('$') else 0.0
         return env.variables[name]
 
-    def assign(self, env, value):
+    def assign(self, env: 'Interpreter', value: BasicValue):
         name = self.name
         expected_type = str if name.endswith("$") else float
         assert isinstance(value, expected_type)
@@ -104,7 +122,7 @@ class IdentifierExpr:
         env.variables[name] = value
 
 
-BASIC_FUNCTIONS = {
+BASIC_FUNCTIONS: Dict[str, Tuple[List[str], str]] = {
     'INT': (['number'], 'number'),
     'LEN': (['string'], 'number'),
     'INSTR': (['number', 'string', 'string'], 'number'),
@@ -112,15 +130,15 @@ BASIC_FUNCTIONS = {
 }
 
 
-class CallExpr:
-    def __init__(self, name, args):
+class CallExpr(AssignableExpr):
+    def __init__(self, name: str, args: List[Expr]):
         self.name = name
         self.args = args
 
     def __str__(self):
         return "{}({})".format(self.name, ",".join(str(arg) for arg in self.args))
 
-    def type_check(self):
+    def type_check(self) -> str:
         actual_arg_types = [arg.type_check() for arg in self.args]
         if self.name in BASIC_FUNCTIONS:
             expected_arg_types, rtype = BASIC_FUNCTIONS[self.name]
@@ -137,22 +155,30 @@ class CallExpr:
         else:
             raise BasicError("unrecognized function: " + self.name)
 
-    def evaluate(self, env):
+    def evaluate(self, env: 'Interpreter') -> BasicValue:
         args = [e.evaluate(env) for e in self.args]
         if self.name == 'INT':
             [n] = args
+            assert isinstance(n, float)
             return float(math.floor(n))
         elif self.name == 'LEN':
             [s] = args
+            assert isinstance(s, str)
             return float(len(s))
         elif self.name == 'INSTR':
             start, haystack, needle = args
+            assert isinstance(start, float)
+            assert isinstance(haystack, str)
+            assert isinstance(needle, str)
             if start < 1 or int(start) != start:
                 raise BasicError("INSTR expects string index, not {}".format(start))
             where = haystack.find(needle, int(start) - 1) + 1
             return float(where)
         elif self.name == 'MID$':
             s, start, length = args
+            assert isinstance(s, str)
+            assert isinstance(start, float)
+            assert isinstance(length, float)
             if int(start) != start or start < 1 or int(length) != length or length < 0:
                 raise BasicError("invalid bounds in MID$")
             start = int(start) - 1
@@ -171,7 +197,7 @@ class CallExpr:
         else:
             raise BasicError("unknown function: " + self.name)
 
-    def assign(self, env, value):
+    def assign(self, env: 'Interpreter', value: BasicValue):
         args = [e.evaluate(env) for e in self.args]
         if self.name in BASIC_FUNCTIONS:
             raise BasicError("can't assign to {}()".format(self.name))
@@ -182,8 +208,8 @@ class CallExpr:
             raise BasicError("unknown array: " + self.name)
 
 
-class ArithmeticExpr:
-    def __init__(self, op, left, right):
+class ArithmeticExpr(Expr):
+    def __init__(self, op: str, left: Expr, right: Expr):
         self.op = op
         self.left = left
         self.right = right
@@ -191,12 +217,12 @@ class ArithmeticExpr:
     def __str__(self):
         return "({}{}{})".format(self.left, self.op, self.right)
 
-    def type_check(self):
+    def type_check(self) -> str:
         if self.left.type_check() != 'number' or self.right.type_check() != 'number':
             raise BasicError("{} expects numeric argument".format(self.op))
         return 'number'
 
-    def evaluate(self, env):
+    def evaluate(self, env: 'Interpreter') -> BasicValue:
         left = self.left.evaluate(env)
         if not isinstance(left, float):
             raise BasicError("{} expects numeric argument".format(self.op))
@@ -215,8 +241,8 @@ class ArithmeticExpr:
             raise BasicError("unknown operator: " + self.op)
 
 
-class ComparisonExpr:
-    def __init__(self, op, left, right):
+class ComparisonExpr(Expr):
+    def __init__(self, op: str, left: Expr, right: Expr):
         self.op = op
         self.left = left
         self.right = right
@@ -224,7 +250,7 @@ class ComparisonExpr:
     def __str__(self):
         return "({}{}{})".format(self.left, self.op, self.right)
 
-    def type_check(self):
+    def type_check(self) -> str:
         left_t = self.left.type_check()
         right_t = self.right.type_check()
         if left_t != right_t:
@@ -233,7 +259,7 @@ class ComparisonExpr:
                 .format(self.op, self.left, left_t, self.right, right_t))
         return 'number'
 
-    def evaluate(self, env):
+    def evaluate(self, env: 'Interpreter') -> BasicValue:
         left = self.left.evaluate(env)
         right = self.right.evaluate(env)
         if self.op == '<':
@@ -263,7 +289,13 @@ class Stmt:
             margin = "%05d   " % self.lineno
         return margin + self.stmt_code() + self.comment
 
-    def jump_targets(self):
+    def stmt_code(self) -> str:
+        raise NotImplementedError()
+
+    def run(self, env: 'Interpreter'):
+        raise NotImplementedError()
+
+    def jump_targets(self) -> Sequence[int]:
         return ()
 
     def check_line_numbers(self, lineno_table):
@@ -279,28 +311,29 @@ class EmptyStmt(Stmt):
     def __init__(self):
         super(EmptyStmt, self).__init__()
 
-    def stmt_code(self):
+    def stmt_code(self) -> str:
         return ""
 
-    def run(self, env):
+    def run(self, env: 'Interpreter'):
         pass
 
 
 class DimStmt(Stmt):
-    def __init__(self, name, size_expr):
+    def __init__(self, name: str, size_expr: Expr):
         super(DimStmt, self).__init__()
         self.name = name
         self.size_expr = size_expr
 
-    def stmt_code(self):
+    def stmt_code(self) -> str:
         return "DIM {}({})".format(self.name, self.size_expr)
 
     def type_check(self):
         if self.size_expr.type_check() != 'number':
             raise BasicError("DIM statement array size must be number")
 
-    def run(self, env):
+    def run(self, env: 'Interpreter'):
         size = self.size_expr.evaluate(env)
+        assert isinstance(size, float)
         if size < 0 or float(int(size)) != size:
             raise BasicError("invalid array dimension")
         else:
@@ -311,10 +344,11 @@ class EndStmt(Stmt):
     def __init__(self):
         super(EndStmt, self).__init__()
 
-    def stmt_code(self):
+    def stmt_code(self) -> str:
         return "END"
 
-    def run(self, env):
+
+    def run(self, env: 'Interpreter'):
         env.status = 'stop'
 
 
@@ -322,10 +356,11 @@ class StopStmt(Stmt):
     def __init__(self):
         super(StopStmt, self).__init__()
 
-    def stmt_code(self):
+    def stmt_code(self) -> str:
         return "STOP"
 
-    def run(self, env):
+
+    def run(self, env: 'Interpreter'):
         env.status = 'stop'
 
 
@@ -333,30 +368,30 @@ class RandomizeStmt(Stmt):
     def __init__(self):
         super(RandomizeStmt, self).__init__()
 
-    def stmt_code(self):
+    def stmt_code(self) -> str:
         return "RANDOMIZE"
 
-    def run(self, env):
+    def run(self, env: 'Interpreter'):
         pass
 
 
 class IfStmt(Stmt):
-    def __init__(self, condition, target):
+    def __init__(self, condition: Expr, target: int):
         super(IfStmt, self).__init__()
         self.condition = condition
         self.target = target
 
-    def stmt_code(self):
+    def stmt_code(self) -> str:
         return "IF {} THEN {}".format(self.condition, self.target)
 
     def type_check(self):
         if self.condition.type_check() != 'number':
             raise BasicError("IF statement condition must be number")
 
-    def jump_targets(self):
+    def jump_targets(self) -> Sequence[int]:
         return [self.target]
 
-    def run(self, env):
+    def run(self, env: 'Interpreter'):
         cond = self.condition.evaluate(env)
         if type(cond) is not float:
             raise BasicError("IF requires a numeric condition")
@@ -365,13 +400,13 @@ class IfStmt(Stmt):
 
 
 class ForStmt(Stmt):
-    def __init__(self, var, first_expr, last_expr):
+    def __init__(self, var: str, first_expr: Expr, last_expr: Expr):
         super(ForStmt, self).__init__()
         self.var = var
         self.first_expr = first_expr
         self.last_expr = last_expr
 
-    def stmt_code(self):
+    def stmt_code(self) -> str:
         return "FOR {} = {} TO {}".format(self.var, self.first_expr, self.last_expr)
 
     def type_check(self):
@@ -380,7 +415,7 @@ class ForStmt(Stmt):
         if self.first_expr.type_check() != 'number' or self.last_expr.type_check() != 'number':
             raise BasicError("FOR loop bounds must be numbers")
 
-    def run(self, env):
+    def run(self, env: 'Interpreter'):
         first_value = self.first_expr.evaluate(env)
         if type(first_value) is not float:
             raise BasicError("FOR requires numeric bounds")
@@ -392,12 +427,12 @@ class ForStmt(Stmt):
 
 
 class NextStmt(Stmt):
-    def __init__(self, var=None):
+    def __init__(self, var: Optional[str]=None):
         super(NextStmt, self).__init__()
         self.var = var
         self.loop_head = None
 
-    def stmt_code(self):
+    def stmt_code(self) -> str:
         if self.var is None:
             return "NEXT"
         else:
@@ -411,7 +446,7 @@ class NextStmt(Stmt):
         assert isinstance(self.loop_head, int)
         return [self.loop_head]
 
-    def run(self, env: Interpreter):
+    def run(self, env: 'Interpreter'):
         var: str = self.var or env.program.lines[self.loop_head].var
         value = env.variables[var] + 1.0
         env.variables[var] = value
@@ -428,12 +463,12 @@ class PrintTab:
 
 
 class PrintStmt(Stmt):
-    def __init__(self, exprs, trailing_semicolon=False):
+    def __init__(self, exprs: List[Union[Expr, PrintTab]], trailing_semicolon: bool=False):
         super(PrintStmt, self).__init__()
         self.exprs = exprs
         self.trailing_semicolon = trailing_semicolon
 
-    def stmt_code(self):
+    def stmt_code(self) -> str:
         if self.exprs == []:
             return "PRINT"
         return "PRINT{}{}".format(
@@ -444,7 +479,7 @@ class PrintStmt(Stmt):
         for expr in self.exprs:
             expr.type_check()
 
-    def run(self, env):
+    def run(self, env: 'Interpreter'):
         for e in self.exprs:
             if isinstance(e, PrintTab):
                 env.write_tab()
@@ -455,18 +490,18 @@ class PrintStmt(Stmt):
 
 
 class LinputStmt(Stmt):
-    def __init__(self, var):
+    def __init__(self, var: str):
         super(LinputStmt, self).__init__()
         self.var = var
 
-    def stmt_code(self):
+    def stmt_code(self) -> str:
         return "LINPUT {}".format(self.var)
 
     def type_check(self):
         if not self.var.endswith('$'):
             raise BasicError("LINPUT variable must be a string variable")
 
-    def run(self, env):
+    def run(self, env: 'Interpreter'):
         line = input()
         env.variables[self.var] = line
 
@@ -477,17 +512,17 @@ class OnGotoStmt(Stmt):
         self.expr = expr
         self.targets = targets
 
-    def stmt_code(self):
+    def stmt_code(self) -> str:
         return "ON {} GOTO {}".format(self.expr, ','.join(str(t) for t in self.targets))
 
-    def jump_targets(self):
+    def jump_targets(self) -> Sequence[int]:
         return self.targets
 
     def type_check(self):
         if self.expr.type_check() != 'number':
             raise BasicError("ON/GOTO requires numeric operand")
 
-    def run(self, env):
+    def run(self, env: 'Interpreter'):
         num = self.expr.evaluate(env)
         if num < 0 or int(num) != num:
             raise BasicError("invalid ON/GOTO operand")
@@ -498,32 +533,34 @@ class OnGotoStmt(Stmt):
 
 
 class GotoStmt(Stmt):
-    def __init__(self, target):
+    def __init__(self, target: int):
         super(GotoStmt, self).__init__()
         self.target = target
 
-    def stmt_code(self):
+    def stmt_code(self) -> str:
         return "GOTO {}".format(self.target)
 
-    def jump_targets(self):
+    def jump_targets(self) -> Sequence[int]:
         return [self.target]
 
-    def run(self, env):
+
+    def run(self, env: 'Interpreter'):
         env.jump(self.target)
 
 
 class GosubStmt(Stmt):
-    def __init__(self, target):
+    def __init__(self, target: int):
         super(GosubStmt, self).__init__()
         self.target = target
 
-    def stmt_code(self):
+    def stmt_code(self) -> str:
         return "GOSUB {}".format(self.target)
 
-    def jump_targets(self):
+    def jump_targets(self) -> Sequence[int]:
         return [self.target]
 
-    def run(self, env):
+
+    def run(self, env: 'Interpreter'):
         env.stack.append(['GOSUB', env.get_next_index()])
         env.jump(self.target)
 
@@ -532,10 +569,11 @@ class ReturnStmt(Stmt):
     def __init__(self):
         super(ReturnStmt, self).__init__()
 
-    def stmt_code(self):
+    def stmt_code(self) -> str:
         return "RETURN"
 
-    def run(self, env):
+
+    def run(self, env: 'Interpreter'):
         if len(env.stack) == 0:
             raise BasicError("RETURN without GOSUB")
         record = env.stack.pop()
@@ -545,12 +583,12 @@ class ReturnStmt(Stmt):
 
 
 class AssignmentStmt(Stmt):
-    def __init__(self, targets, expr):
+    def __init__(self, targets: List[AssignableExpr], expr: Expr):
         super(AssignmentStmt, self).__init__()
         self.targets = targets
         self.expr = expr
 
-    def stmt_code(self):
+    def stmt_code(self) -> str:
         return "{}={}".format("=".join(str(e) for e in self.targets), self.expr)
 
     def type_check(self):
@@ -562,7 +600,7 @@ class AssignmentStmt(Stmt):
                     "type error in assignment: can't assign {} {} to {}"
                     .format(actual, self.expr, target))
 
-    def run(self, env):
+    def run(self, env: 'Interpreter'):
         value = self.expr.evaluate(env)
         for target in self.targets:
             target.assign(env, value)
@@ -570,7 +608,7 @@ class AssignmentStmt(Stmt):
 
 # Parsing
 
-def tokenize(line):
+def tokenize(line: str) -> Tuple[List[str], str]:
     tokens = []
     comment = ''
     for m in re.finditer(TOKEN_RE, line):
@@ -583,11 +621,11 @@ def tokenize(line):
     return tokens, comment
 
 
-def token_is_comment(token):
+def token_is_comment(token: str) -> bool:
     return token.startswith(("'", "REM "))
 
 
-def parse_line(line):
+def parse_line(line: str) -> Stmt:
     tokens, comment = tokenize(line)
 
     point = 0
@@ -595,20 +633,20 @@ def parse_line(line):
     def at_end():
         return point == len(tokens)
 
-    def match(exact_token):
+    def match(exact_token: str) -> bool:
         nonlocal point
         if not at_end() and tokens[point] == exact_token:
             point += 1
             return True
         return False
 
-    def require(exact_token):
+    def require(exact_token: str):
         nonlocal point
         if at_end() or tokens[point] != exact_token:
             raise BasicError("expected " + exact_token)
         point += 1
 
-    def require_identifier():
+    def require_identifier() -> str:
         nonlocal point
         if at_end() or not tokens[point][0].isalpha():
             raise BasicError("expected identifier")
@@ -616,7 +654,7 @@ def parse_line(line):
         point += 1
         return t
 
-    def parse_prim():
+    def parse_prim() -> Expr:
         nonlocal point
         if at_end():
             raise BasicError("expression expected")
@@ -643,7 +681,7 @@ def parse_line(line):
             else:
                 raise BasicError("expected expression, got " + repr(t))
 
-    def parse_call():
+    def parse_call() -> Expr:
         nonlocal point
         if at_end():
             raise BasicError("expression expected")
@@ -660,7 +698,7 @@ def parse_line(line):
         else:
             return parse_prim()
 
-    def parse_term():
+    def parse_term() -> Expr:
         e = parse_call()
         while True:
             for op in '*/':
@@ -671,7 +709,7 @@ def parse_line(line):
                 break
         return e
 
-    def parse_arithmetic_expr():
+    def parse_arithmetic_expr() -> Expr:
         e = parse_term()
         while True:
             for op in '+-':
@@ -682,14 +720,14 @@ def parse_line(line):
                 break
         return e
 
-    def parse_expr():
+    def parse_expr() -> Expr:
         e = parse_arithmetic_expr()
         for op in ('<', '=', '>', '<>'):
             if match(op):
                 return ComparisonExpr(op, e, parse_arithmetic_expr())
         return e
 
-    def parse_lineno():
+    def parse_lineno() -> int:
         nonlocal point
         if at_end() or not tokens[point].isdigit():
             raise BasicError("line number expected")
@@ -697,6 +735,7 @@ def parse_line(line):
         point += 1
         return lineno
 
+    stmt: Stmt
     if at_end():
         stmt = EmptyStmt()
     elif match('STOP'):
@@ -733,7 +772,7 @@ def parse_line(line):
             point += 1
             stmt = NextStmt(var)
     elif match('PRINT'):
-        exprs = []
+        exprs: List[Union[Expr, PrintTab]] = []
         semicolon = False
         while not at_end():
             if match(';'):
@@ -770,11 +809,14 @@ def parse_line(line):
         vars = [parse_arithmetic_expr()]
         while match('='):
             vars.append(parse_arithmetic_expr())
-        value = vars.pop()
-        for v in vars:
-            if not isinstance(v, (IdentifierExpr, CallExpr)):
+        assignment_targets: List[AssignableExpr] = []
+        value: Expr = vars.pop()
+        for assignee in vars:
+            if isinstance(assignee, AssignableExpr):
+                assignment_targets.append(assignee)
+            else:
                 raise BasicError("invalid assignment target")
-        stmt = AssignmentStmt(vars, value)
+        stmt = AssignmentStmt(assignment_targets, value)
     else:
         raise BasicError("could not parse line: " + repr(line))
 
@@ -785,14 +827,16 @@ def parse_line(line):
     return stmt
 
 
+T = TypeVar('T', bound='Program')
+
 class Program:
-    def __init__(self, lines, line_table):
+    def __init__(self, lines: List[Stmt], line_table: Dict[int, int]):
         self.lines = lines
         self.line_table = line_table
 
     @staticmethod
-    def split_lines(line_iter, filename=""):
-        prev_lineno = None
+    def split_lines(line_iter: Iterable[str], filename: str=""):
+        prev_lineno: Optional[int] = None
         for physical_lineno, line in enumerate(line_iter, start=1):
             line = line.strip()
             if line == '' or line.startswith("'"):
@@ -834,7 +878,7 @@ class Program:
             raise BasicError("FOR without NEXT:\n" + str(for_loop_stack.pop()))
 
     @classmethod
-    def from_lines(cls, line_iter, filename=""):
+    def from_lines(cls: Type[T], line_iter: Iterable[str], filename: str="") -> T:
         lines = [(lineno, line) for lineno, line in cls.split_lines(line_iter, filename)]
         line_table = {lineno: index for index, (lineno, _) in enumerate(lines)}
         parsed_lines = []
@@ -857,7 +901,7 @@ class Program:
         with open(filename) as f:
             return cls.from_lines(f, filename)
 
-    def all_jump_targets(self):
+    def all_jump_targets(self) -> Set[int]:
         all_targets = set()
         for stmt in self.lines:
             for target in stmt.jump_targets():
@@ -934,6 +978,7 @@ class Interpreter:
                 self._pc += 1
                 if self._pc >= len(self.program.lines):
                     self.status = 'stop'
+
 
 def main():
     parser = argparse.ArgumentParser(description="Interpret some sort of BASIC program.")
