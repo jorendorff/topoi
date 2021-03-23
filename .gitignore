@@ -8,3 +8,7 @@ Topoi.inform/manifest.plist
 Topoi.inform/notes.rtf
 Topoi.inform/uuid.txt
 Topoi.materials/Release
+Topoi.materials/Icon*
+.mypy_cache/
+__pycache__/
+venv/
