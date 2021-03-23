@@ -1,0 +1,16 @@
+# TODO:
+# - static checking:
+#     - check that FOR/NEXT properly pair up in the CFG (assuming every branch is always possible)
+#     - same for GOSUB/RETURN
+#     - extend type checking to understand more values, ranges, integerness
+#     - definite assignment analysis
+# - CFG analysis
+#     - separate CFG for each subroutine
+#     - implement FOR/NEXT properly
+# - interpreter output:
+#     - track characters printed per line, to support the very wide tabs in the original
+#     - tracing output should interfere less with print
+#         - use output_column to cope with tracing output in the middle of a line
+#     - tracing output in a different color
+# - inform output:
+#     - find all subroutines and split those with multiple entry-points to use tail calls
